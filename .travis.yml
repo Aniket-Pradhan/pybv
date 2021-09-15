@@ -1,0 +1,27 @@
+os: linux
+dist: focal
+language: python
+addons:
+  apt:
+    packages:
+      - python3-scipy
+
+jobs:
+  fast_finish: true
+  include:
+    - python: '3.8'
+      arch: s390x
+    - python: '3.8'
+      arch: ppc64le
+
+before_install:
+  - sudo apt -y install python3-scipy
+
+install:
+  - pip3 install -r requirements-dev.txt
+
+script:
+  - python3 setup.py install
+
+after_success:
+  - pytest
