@@ -1,0 +1,90 @@
+name: Python tests on different architectures
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  create:
+    branches: [main]
+    tags: ['**']
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch:
+
+jobs:
+  build_job:
+    runs-on: ubuntu-18.04
+    name: Build and test on ${{ matrix.distro }} ${{ matrix.arch }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            distro: fedora_latest
+          - arch: ppc64le
+            distro: fedora_latest
+          - arch: s390x
+            distro: fedora_latest
+          - arch: armv7
+            distro: fedora_latest
+
+    steps:
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Build and test on ${{ matrix.distro }} ${{ matrix.arch }}
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+
+          # Not passing the githubToken as it is cached in the final
+          # images which are stored on Github's package registry
+          # Uncommenting it can help fasten the build process
+          # githubToken: ${{ github.token }}
+
+          shell: /bin/sh
+
+          # Install scipy from system repos because pip doesn't provide
+          # wheels for scipy for s390x or arm architectures.
+          # Building scipy from scratch takes up a lot of time which
+          # exceeds the maximum action run-time.
+          # It also installes numpy from the system repos since numpy is
+          # a dependency for scipy
+          install: |
+            case "${{ matrix.distro }}" in
+              ubuntu*|jessie|stretch|buster)
+                apt-get update -q -y
+                apt-get install -q -y git
+                ;;
+              fedora*)
+                dnf -y update
+                dnf -y install python3-scipy
+                ;;
+              alpine*)
+                apk update
+                apk add git
+                ;;
+              archarm*)
+                pacman -Syyu --noconfirm
+                pacman -S git which --noconfirm
+            esac
+            curl -L https://github.com/bids-standard/pybv/archive/refs/tags/v0.5.0.tar.gz -o /root/pybv-0.5.0.tar.gz
+
+          run: |
+            cd /root/
+            tar -xvf pybv-0.5.0.tar.gz
+            cd pybv-0.5.0
+
+            python -m pip install --upgrade pip
+
+            echo "Installing test requirements"
+            pip install -r requirements-dev.txt --progress-bar off
+
+            echo "Installing pybv"
+            pip install .
+
+            echo "Installing mne"
+            pip install -U https://api.github.com/repos/mne-tools/mne-python/zipball/main --progress-bar off
+
+            echo "Running tests"
+            pytest pybv/
