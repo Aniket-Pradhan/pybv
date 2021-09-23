@@ -3,8 +3,14 @@ dist: focal
 language: python
 addons:
   apt:
+    update: true
     packages:
       - python3-scipy
+      - gcc
+      - gfortran
+      - python3-dev
+      - libopenblas-dev
+      - liblapack-dev
 
 jobs:
   fast_finish: true
@@ -15,13 +21,11 @@ jobs:
       arch: ppc64le
 
 before_install:
-  - sudo apt -y install python3-scipy
+  - python3 -m pip install --upgrade pip
 
 install:
   - pip3 install -r requirements-dev.txt
-
-script:
   - python3 setup.py install
 
-after_success:
+script:
   - pytest
