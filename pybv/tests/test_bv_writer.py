@@ -14,7 +14,6 @@
 import os
 import os.path as op
 import re
-import sys
 from datetime import datetime, timezone
 
 import mne
@@ -430,16 +429,3 @@ def test_overwrite(tmpdir):
         write_brainvision(data=data, sfreq=sfreq, ch_names=ch_names,
                           fname_base=fname, folder_out=tmpdir,
                           overwrite=False)
-
-
-def test_write_big_endian_format(tmpdir):
-    """Test data in big-endian format."""
-    if sys.byteorder == "little":
-        data_bigendian = data.astype(">f8")
-
-    write_brainvision(data=data_bigendian, sfreq=sfreq, ch_names=ch_names,
-                      fname_base=fname, folder_out=tmpdir)
-    vhdr_fname = tmpdir / fname + '.vhdr'
-    raw_written = mne.io.read_raw_brainvision(vhdr_fname=vhdr_fname,
-                                              preload=True)
-    assert_allclose(data, raw_written._data)
